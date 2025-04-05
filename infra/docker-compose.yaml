@@ -1,0 +1,54 @@
+version: '3.9'
+
+name: tfidf
+services:
+
+  postgresdb:
+    image: postgres:16-alpine
+    container_name: db-tfidf
+    restart: always
+    mem_limit: 1G
+    env_file:
+      - .env
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+    ports:
+     - '5432:5432'
+    volumes:
+      - ../.data/db:/var/lib/postgresql/data
+
+  backend:
+    container_name: backend-tfidf
+    build:
+      context: ../tfidf
+      dockerfile: ../tfidf/Dockerfile
+    restart: always
+    mem_limit: 1G
+    depends_on:
+      - postgresdb
+    env_file:
+      - .env
+    volumes:
+      - ../.data/staticfiles:/app/staticfiles
+      - ../.data/media:/app/media
+      #- ../.data/templates:/app/templates
+
+  nginx:
+    build:
+      dockerfile: ./Dockerfile
+    container_name: nginx-tfidf
+    restart: always
+    mem_limit: 512m
+    volumes:
+      - type: bind
+        source: ./default.conf.conf
+        target: /etc/nginx/templates/default.conf.conf
+      - ../.data/media:/var/www/html/media
+      - ../.data/staticfiles:/var/www/html/static
+
+    environment:
+      NGINX_ENVSUBST_TEMPLATE_SUFFIX: .conf
+    ports:
+      - "80:80"

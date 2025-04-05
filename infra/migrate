@@ -1,0 +1,4 @@
+#!/bin/bash
+
+docker exec "$(docker container ls | grep "backend-tfidf" | awk ' { print $1 } ')" python3 manage.py migrate
+docker exec "$(docker container ls | grep "backend-tfidf" | awk ' { print $1 } ')" python3 manage.py collectstatic --noinput
