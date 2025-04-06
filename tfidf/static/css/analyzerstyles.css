@@ -277,3 +277,117 @@ select:focus {
         text-align: center;
     }
 }
+
+
+.report-container {
+  background-color: #f8f9fa;
+  padding: 2rem 0;
+}
+
+/* Заголовок отчета */
+.report-header {
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.report-title {
+  color: #3498db;
+  margin-bottom: 0.5rem;
+}
+
+.filename {
+  color: #2c3e50;
+  font-weight: bold;
+}
+
+.report-subtitle {
+  color: #7f8c8d;
+  font-size: 1.2rem;
+}
+
+.docs-count {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+/* Стили таблицы */
+.frequency-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.frequency-table th {
+  background-color: #3498db;
+  color: white;
+  padding: 12px 15px;
+  text-align: left;
+}
+
+.frequency-table td {
+  padding: 10px 15px;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.frequency-table tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.frequency-table tr:hover {
+  background-color: #e8f4fc;
+}
+
+/* Пагинация */
+.pagination {
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.pagination-link {
+  color: #3498db;
+  padding: 0.5rem 1rem;
+  margin: 0 0.25rem;
+  text-decoration: none;
+  border: 1px solid #3498db;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+
+.pagination-link:hover {
+  background-color: #3498db;
+  color: white;
+}
+
+.current {
+  padding: 0.5rem 1rem;
+  margin: 0 0.25rem;
+}
+
+/* Сообщение об отсутствии данных */
+.no-data {
+  background-color: white;
+  padding: 2rem;
+  text-align: center;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  color: #7f8c8d;
+  font-size: 1.1rem;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .frequency-table {
+      display: block;
+      overflow-x: auto;
+  }
+  
+  .report-title {
+      font-size: 1.5rem;
+  }
+}
