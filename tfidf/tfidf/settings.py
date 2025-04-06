@@ -5,10 +5,13 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-SECRET_KEY = 'django-insecure-*)pz%b(hpo6$@jf1x!3inrk#-i^0&v!@1-j58x&!lzmw_4z$0#'
+SECRET_KEY = os.getenv(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-*)pz%b(hpo6$@jf1x!3inrk#-i^0&v!@1-j58x&!lzmw_4z$0#'
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = [
     'localhost',
@@ -19,9 +22,6 @@ ALLOWED_HOSTS = [
 CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1',
 ]
-
-
-# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -85,8 +85,6 @@ DATABASES = {
 #     }
 # }
 
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {

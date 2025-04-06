@@ -1,62 +1,70 @@
 {% extends 'base.html' %}
 
-{% block title %}tf idf{% endblock title %}
+{% block title %}TF-IDF анализ{% endblock title %}
 
 {% block content %}
-<main class="report-container">
+  <main class="report-container">
     <div class="container py-5">
-        <div class="report-header mb-5">  
-            <h1 class="report-title">TF-IDF для файла <span class="filename">{{ filename }}</span></h1>
-            <h3 class="report-subtitle">Всего документов: <span class="docs-count">{{ docs_amount }}</span></h3>
-        </div>
+      <div class="report-header mb-5">  
+        <h1 class="report-title">
+          TF-IDF для файла <span class="filename">{{ filename }}</span>
+        </h1>
+        <h3 class="report-subtitle">
+          Всего документов: <span class="docs-count">{{ docs_amount }}</span>
+        </h3>
+      </div>
 
-        {% if word_data_page %}
+      {% if word_data_page %}
         <div class="table-responsive">
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>№</th>
-                        <th>Слово</th>
-                        <th>TF</th>
-                        <th>IDF</th>
-                        <th>TF-IDF</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for word, tf, idf, tf_idf in word_data_page %}
-                    <tr>
-                        <td>{{ forloop.counter }}</td>
-                        <td>{{ word }}</td>
-                        <td>{{ tf|floatformat:6 }}</td>
-                        <td>{{ idf|floatformat:6 }}</td>
-                        <td>{{ tf_idf|floatformat:6 }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>№</th>
+                <th>Слово</th>
+                <th>TF</th>
+                <th>IDF</th>
+                <th>TF-IDF</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for word, tf, idf, tf_idf in word_data_page %}
+                <tr>
+                  <td>{{ forloop.counter }}</td>
+                  <td>{{ word }}</td>
+                  <td>{{ tf|floatformat:6 }}</td>
+                  <td>{{ idf|floatformat:6 }}</td>
+                  <td>{{ tf_idf|floatformat:6 }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
 
-        <!-- Пагинация -->
         <div class="pagination mt-4">
-            <span class="step-links">
-                {% if word_frequency_page.has_previous %}
-                    <a href="?page=1" class="pagination-link">&laquo; первая</a>
-                    <a href="?page={{ word_frequency_page.previous_page_number }}" class="pagination-link">предыдущая</a>
-                {% endif %}
+          <span class="step-links">
+            {% if word_data_page.has_previous %}
+              <a href="?page=1" class="pagination-link">&laquo; первая</a>
+              <a href="?page={{ word_data_page.previous_page_number }}" 
+                 class="pagination-link">предыдущая</a>
+            {% endif %}
 
-                <span class="current">
-                    Страница {{ word_frequency_page.number }} из {{ word_frequency_page.paginator.num_pages }}
-                </span>
-
-                {% if word_frequency_page.has_next %}
-                    <a href="?page={{ word_frequency_page.next_page_number }}" class="pagination-link">следующая</a>
-                    <a href="?page={{ word_frequency_page.paginator.num_pages }}" class="pagination-link">последняя &raquo;</a>
-                {% endif %}
+            <span class="current">
+              Страница {{ word_data_page.number }} из {{ word_data_page.paginator.num_pages }}
             </span>
+
+            {% if word_data_page.has_next %}
+              <a href="?page={{ word_data_page.next_page_number }}" 
+                 class="pagination-link">следующая</a>
+              <a href="?page={{ word_data_page.paginator.num_pages }}" 
+                 class="pagination-link">последняя &raquo;</a>
+            {% endif %}
+          </span>
         </div>
-        {% else %}
-            <div class="no-data">Нет данных о частоте слов</div>
-        {% endif %}
+      {% else %}
+        <div class="no-data">
+          Нет данных о частоте слов
+        </div>
+      {% endif %}
     </div>
-</main>
+  </main>
 {% endblock %}

@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="msapplication-TileColor" content="#000">
     <meta name="theme-color" content="#ffffff">
-    <link rel="stylesheet" href={% static "css/analyzerstyles.css" %}>
+    <link rel="stylesheet" href="{% static 'css/analyzerstyles.css' %}">
     <title>
       {% block title %}
         Analyzer
@@ -14,12 +14,17 @@
     </title>
   </head>
   <body>
-    <header>
-      {% include 'includes/header.html' %}      
-    </header>
-    {% block content %}
-    {% endblock content %}
-    <footer class="border-top text-center py-3">
-      {% include 'includes/footer.html' %}   
-    </footer>   
+    <div class="page-wrapper">
+      {% include 'includes/header.html' %}
+      
+      <main class="main-content">
+        {% block content %}
+        {% endblock content %}
+      </main>
+      
+      <footer class="footer border-top text-center py-3">
+        {% include 'includes/footer.html' %}
+      </footer>
+    </div>
   </body>
+</html>

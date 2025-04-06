@@ -1,2 +1,14 @@
 {% load static %}
-  Analyzer
+
+<header class="site-header">
+  <div class="container">
+    <div class="header-content">
+      <a href="{% url 'analyzer:index' %}" class="logo-link">
+        <span class="logo-text">Analyzer</span>
+      </a>
+      <nav class="main-nav">
+        <a href="{% url 'analyzer:index' %}" class="nav-link">Главная</a>
+      </nav>
+    </div>
+  </div>
+</header>
