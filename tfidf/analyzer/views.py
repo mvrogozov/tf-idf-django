@@ -17,12 +17,10 @@ class DocumentCreateView(CreateView):
 
     def form_valid(self, form):
         doc = form.save(commit=False)
-        print(form.files)
         text = []
         for chunk in form.cleaned_data['document'].chunks():
             text.append(chunk.decode('utf-8'))
         data = ''.join(text)
-        print(f'len={len(data)}, data= {data[:10]}')
         morph = pymorphy2.MorphAnalyzer()
         freq = {}
         text_length = 0
