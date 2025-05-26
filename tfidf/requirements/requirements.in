@@ -2,4 +2,5 @@ django
 psycopg2-binary
 gunicorn
 pymorphy2
-setuptools
+djangorestframework
+chardet

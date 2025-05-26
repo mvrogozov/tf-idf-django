@@ -7,7 +7,13 @@ class Document(models.Model):
     )
     word_frequency = models.JSONField(
         null=True,
-        blank=True
+        blank=True,
+        verbose_name='частоты слов'
+    )
+    time_processed = models.FloatField(
+        null=True,
+        blank=True,
+        verbose_name='время обработки, c'
     )
 
     def __str__(self):
