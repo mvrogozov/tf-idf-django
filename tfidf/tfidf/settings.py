@@ -10,14 +10,8 @@ SECRET_KEY = os.getenv(
     'django-insecure-*)pz%b(hpo6$@jf1x!3inrk#-i^0&v!@1-j58x&!lzmw_4z$0#'
 )
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DJANGO_DEBUG') == True
-
-ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    'backend-tfidf'
-]
+DEBUG = os.getenv('DJANGO_DEBUG') == 'True'
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 
 CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1',
@@ -111,7 +105,6 @@ if DEBUG:
             },
         },
 }
-
 
 ANALYZER_MIN_WORD_LENGTH = 3
 

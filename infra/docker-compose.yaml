@@ -31,7 +31,6 @@ services:
     volumes:
       - ../.data/staticfiles:/app/staticfiles
       - ../.data/media:/app/media
-      #- ../.data/templates:/app/templates
 
   nginx:
     build:
@@ -49,4 +48,4 @@ services:
     environment:
       NGINX_ENVSUBST_TEMPLATE_SUFFIX: .conf
     ports:
-      - "80:80"
+      - "${HTTP_PORT}:80"
