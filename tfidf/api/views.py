@@ -31,27 +31,39 @@ class VersionView(APIView):
 class MetricsView(APIView):
     def get(self, request):
         objs = Document.objects.all()
-        max_size = max(doc.document.size for doc in objs) if objs else 0
-        min_size = min(doc.document.size for doc in objs) if objs else 0
-        avg_size = (
-            sum(doc.document.size for doc in objs) // objs.count()
-            if objs else 0
-        )
-        stats = Document.objects.aggregate(
-            min_time=Min('time_processed'),
-            avg_time=Avg('time_processed'),
-            max_time=Max('time_processed'),
-            total_files=Count('id')
-        )
-        data = {
-            'files_processed': stats['total_files'],
-            'min_time_processed': f'{stats["min_time"]:.3f}',
-            'avg_time_processed': f'{stats["avg_time"]:.3f}',
-            'max_time_processed': f'{stats["max_time"]:.3f}',
-            'max_file_size': max_size,
-            'min_file_size': min_size,
-            'avg_file_size': avg_size,
-            'latest_file_processed': f'{objs.last().time_processed:.3f}',
-        }
+        if not objs:
+            data = {
+                'files_processed': 0,
+                'min_time_processed': 0,
+                'avg_time_processed': 0,
+                'max_time_processed': 0,
+                'max_file_size': 0,
+                'min_file_size': 0,
+                'avg_file_size': 0,
+                'latest_file_processed': 0,
+            }
+        else:
+            max_size = max(doc.document.size for doc in objs)
+            min_size = min(doc.document.size for doc in objs)
+            avg_size = (
+                sum(doc.document.size for doc in objs) // objs.count()
+                if objs else 0
+            )
+            stats = Document.objects.aggregate(
+                min_time=Min('time_processed'),
+                avg_time=Avg('time_processed'),
+                max_time=Max('time_processed'),
+                total_files=Count('id')
+            )
+            data = {
+                'files_processed': stats['total_files'],
+                'min_time_processed': f'{stats["min_time"]:.3f}',
+                'avg_time_processed': f'{stats["avg_time"]:.3f}',
+                'max_time_processed': f'{stats["max_time"]:.3f}',
+                'max_file_size': max_size,
+                'min_file_size': min_size,
+                'avg_file_size': avg_size,
+                'latest_file_processed': f'{objs.last().time_processed:.3f}',
+            }
         serializer = MetricSerializer(data)
         return Response(serializer.data, status=status.HTTP_200_OK)
