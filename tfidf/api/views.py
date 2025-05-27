@@ -31,8 +31,8 @@ class VersionView(APIView):
 class MetricsView(APIView):
     def get(self, request):
         objs = Document.objects.all()
-        max_size = max(doc.document.size for doc in objs)
-        min_size = min(doc.document.size for doc in objs)
+        max_size = max(doc.document.size for doc in objs) if objs else 0
+        min_size = min(doc.document.size for doc in objs) if objs else 0
         avg_size = (
             sum(doc.document.size for doc in objs) // objs.count()
             if objs else 0
