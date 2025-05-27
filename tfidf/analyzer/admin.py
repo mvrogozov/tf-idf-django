@@ -7,5 +7,6 @@ from .models import Document
 class DocumentAdmin(admin.ModelAdmin):
     fields = (
         'document',
-        'word_frequency'
+        'word_frequency',
+        'time_processed'
     )

@@ -1,7 +1,9 @@
 import math
 import re
+from time import perf_counter
 
 import pymorphy2
+import chardet
 from django.conf import settings
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect
@@ -16,11 +18,15 @@ class DocumentCreateView(CreateView):
     form_class = DocumentForm
 
     def form_valid(self, form):
+        time_start = perf_counter()
         doc = form.save(commit=False)
-        text = []
-        for chunk in form.cleaned_data['document'].chunks():
-            text.append(chunk.decode('utf-8'))
-        data = ''.join(text)
+        raw_data = form.cleaned_data['document'].read()
+        try:
+            data = raw_data.decode('utf-8')
+        except UnicodeDecodeError:
+            encoding = chardet.detect(raw_data)['encoding']
+            data = raw_data.decode(encoding)
+
         morph = pymorphy2.MorphAnalyzer()
         freq = {}
         text_length = 0
@@ -35,6 +41,7 @@ class DocumentCreateView(CreateView):
         for word, amount in freq.items():
             freq[word] = round(amount / text_length, 6)
         doc.word_frequency = freq
+        doc.time_processed = str(perf_counter() - time_start)
         doc.save()
         return redirect('analyzer:report', doc.id)
 
