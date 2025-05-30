@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'drf_spectacular',
     'analyzer.apps.AnalyzerConfig',
 ]
 
@@ -58,6 +59,17 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'tfidf.wsgi.application'
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'tf-idf api',
+    'DESCRIPTION': 'Lesta start. tf-idf project',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
 
 DATABASES = {
     'default': {

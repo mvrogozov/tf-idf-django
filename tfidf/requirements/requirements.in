@@ -4,3 +4,4 @@ gunicorn
 pymorphy2
 djangorestframework
 chardet
+drf-spectacular

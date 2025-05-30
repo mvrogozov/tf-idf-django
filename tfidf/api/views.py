@@ -2,7 +2,6 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Min, Max, Avg, Count
-from django.db.models.functions import Length
 
 from .serializers import StatusSerializer, MetricSerializer, VersionSerializer
 from analyzer.models import Document
@@ -20,7 +19,7 @@ class StatusView(APIView):
 
 class VersionView(APIView):
     def get(self, request):
-        message = 'V1'
+        message = 'V1.0.1'
         data = {
             'version': message
         }
