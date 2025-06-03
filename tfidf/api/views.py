@@ -1,13 +1,35 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.decorators import action
 from django.db.models import Min, Max, Avg, Count
+from drf_spectacular.utils import extend_schema
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
-from .serializers import StatusSerializer, MetricSerializer, VersionSerializer
+
+from .serializers import (
+    StatusSerializer, MetricSerializer, VersionSerializer,
+    UserSerializer, UserPostSerializer, PasswordSerializer
+)
+from .permissions import IsOwnerOrStaff
 from analyzer.models import Document
+from users.models import User
 
 
 class StatusView(APIView):
+    @extend_schema(
+        description="Status",
+        request=None,
+        responses={
+            200: {
+                'type': 'object', 'properties': {'status': {'type': 'string'}}
+            },
+            401: {
+                'type': 'object', 'properties': {'detail': {'type': 'string'}}
+            }
+        }
+    )
     def get(self, request):
         status_message = 'OK'
         data = {
@@ -18,6 +40,18 @@ class StatusView(APIView):
 
 
 class VersionView(APIView):
+    @extend_schema(
+        description="Version",
+        request=None,
+        responses={
+            200: {
+                'type': 'object', 'properties': {'status': {'type': 'string'}}
+            },
+            401: {
+                'type': 'object', 'properties': {'detail': {'type': 'string'}}
+            }
+        }
+    )
     def get(self, request):
         message = 'V1.0.1'
         data = {
@@ -28,6 +62,18 @@ class VersionView(APIView):
 
 
 class MetricsView(APIView):
+    @extend_schema(
+        description="Metrics",
+        request=None,
+        responses={
+            200: {
+                'type': 'string'
+            },
+            401: {
+                'type': 'object', 'properties': {'detail': {'type': 'string'}}
+            }
+        }
+    )
     def get(self, request):
         objs = Document.objects.all()
         if not objs:
@@ -66,3 +112,77 @@ class MetricsView(APIView):
             }
         serializer = MetricSerializer(data)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class LogoutView(APIView):
+    @extend_schema(
+        description="Logout",
+        request=None,
+        responses={
+            200: {
+                'type': 'object', 'properties': {'status': {'type': 'string'}}
+            },
+            401: {
+                'type': 'object', 'properties': {'detail': {'type': 'string'}}
+            }
+        }
+    )
+    def get(self, request):
+        status_message = 'OK'
+        data = {
+            'status': status_message
+        }
+        response = Response(data=data, status=status.HTTP_200_OK)
+        response.delete_cookie('access_token')
+        response.delete_cookie('refresh_token')
+        response.delete_cookie('sessionid')
+        return response
+
+
+class UserViewSet(ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = (IsOwnerOrStaff,)
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return UserPostSerializer
+        return UserSerializer
+
+    @action(
+        detail=False,
+        methods=['post'],
+        permission_classes=[AllowAny],
+        url_name='register',
+        url_path='register'
+    )
+    def register(self, request):
+        return self.create(request)
+
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[IsAuthenticated]
+    )
+    def me(self, request):
+        serializer = UserSerializer(instance=request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=['post'],
+        permission_classes=[IsAuthenticated]
+    )
+    def set_password(self, request):
+        serializer = PasswordSerializer(data=request.data)
+        serializer.validate(request.data)
+        serializer.is_valid(raise_exception=True)
+        if request.user.check_password(
+            serializer.validated_data.get('current_password')
+        ):
+            request.user.set_password(
+                serializer.validated_data.get('new_password')
+            )
+            request.user.save()
+            return Response(status=status.HTTP_200_OK)
+        return Response('wrong password', status=status.HTTP_401_UNAUTHORIZED)

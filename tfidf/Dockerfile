@@ -8,6 +8,7 @@ RUN pip3 install -r requirements.txt --no-cache-dir
 COPY tfidf/ ./tfidf
 COPY analyzer/ ./analyzer
 COPY api/ ./api
+COPY users/ ./users
 COPY templates/ ./templates
 COPY static/ ./static
 COPY manage.py .
