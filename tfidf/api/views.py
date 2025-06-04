@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
 from django.db.models import Min, Max, Avg, Count
+from django.contrib.sessions.models import Session
+from django.contrib.auth import logout as auth_logout
 from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
@@ -10,8 +12,10 @@ from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from .serializers import (
     StatusSerializer, MetricSerializer, VersionSerializer,
-    UserSerializer, UserPostSerializer, PasswordSerializer
+    UserSerializer, UserPostSerializer, PasswordSerializer,
+    UserPasswordSerializer
 )
+from .utils import delete_user_session
 from .permissions import IsOwnerOrStaff
 from analyzer.models import Document
 from users.models import User
@@ -133,9 +137,7 @@ class LogoutView(APIView):
             'status': status_message
         }
         response = Response(data=data, status=status.HTTP_200_OK)
-        response.delete_cookie('access_token')
-        response.delete_cookie('refresh_token')
-        response.delete_cookie('sessionid')
+        delete_user_session(request.user.pk)
         return response
 
 
@@ -145,8 +147,10 @@ class UserViewSet(ModelViewSet):
     permission_classes = (IsOwnerOrStaff,)
 
     def get_serializer_class(self):
-        if self.request.method == 'POST':
+        if self.request.method in ['POST', 'PATCH', 'PUT']:
             return UserPostSerializer
+        # if self.request.method == 'PATCH':
+        #     return UserPasswordSerializer
         return UserSerializer
 
     @action(
@@ -158,6 +162,15 @@ class UserViewSet(ModelViewSet):
     )
     def register(self, request):
         return self.create(request)
+
+    # def partial_update(self, request, *args, **kwargs):
+    #     user = self.get_object()
+    #     serializer = self.get_serializer(user, data=request.data, partial=True)
+    #     serializer.is_valid(raise_exception=True)
+    #     user.set_password(serializer.validated_data.get('password'))
+    #     user.save()
+    #     #self.perform_update(serializer)
+    #     return Response(user.username)
 
     @action(
         detail=False,
@@ -186,3 +199,7 @@ class UserViewSet(ModelViewSet):
             request.user.save()
             return Response(status=status.HTTP_200_OK)
         return Response('wrong password', status=status.HTTP_401_UNAUTHORIZED)
+
+    def perform_destroy(self, instance):
+        delete_user_session(instance.pk)
+        return super().perform_destroy(instance)

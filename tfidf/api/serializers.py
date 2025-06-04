@@ -58,6 +58,12 @@ class UserSerializer(serializers.ModelSerializer):
         )
 
 
+class UserPasswordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('password',)
+
+
 class UserPostSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -74,3 +80,10 @@ class UserPostSerializer(serializers.ModelSerializer):
         user.set_password(validated_data['password'])
         user.save()
         return user
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        if password:
+            instance.set_password(password)
+        return super().update(instance, validated_data)
