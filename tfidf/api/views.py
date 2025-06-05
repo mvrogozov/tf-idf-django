@@ -1,23 +1,31 @@
+from time import perf_counter
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
+from django.conf import settings
 from django.db.models import Min, Max, Avg, Count
 from django.contrib.sessions.models import Session
 from django.contrib.auth import logout as auth_logout
 from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
-
+from rest_framework.viewsets import (
+    ModelViewSet, ReadOnlyModelViewSet, GenericViewSet
+)
+from rest_framework.mixins import (
+    CreateModelMixin, RetrieveModelMixin, ListModelMixin, DestroyModelMixin,
+)
 
 from .serializers import (
     StatusSerializer, MetricSerializer, VersionSerializer,
     UserSerializer, UserPostSerializer, PasswordSerializer,
-    UserPasswordSerializer
+    DocumentSerializer, DocumentPostSerializer, DocumentListSerializer,
+    DocumentRetrieveSerializer
 )
-from .utils import delete_user_session
+from core.utils import delete_user_session, count_tf, count_idfs
 from .permissions import IsOwnerOrStaff
-from analyzer.models import Document
+from analyzer.models import Document, Collection
 from users.models import User
 
 
@@ -181,6 +189,29 @@ class UserViewSet(ModelViewSet):
         serializer = UserSerializer(instance=request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        summary='Change password for current user',
+        responses={
+            200: {
+                'type': 'object', 'properties': {'detail': {'type': 'string'}}
+            },
+            400: {
+                'type': 'object', 'properties': {'detail': {'type': 'string'}}
+            },
+            401: {
+                'type': 'object', 'properties': {'detail': {'type': 'string'}}
+            }
+        },
+        request={
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {
+                    "current_password": {"type": "string"},
+                    "new_password": {"type": "string"},
+                },
+            },
+        }
+    )
     @action(
         detail=False,
         methods=['post'],
@@ -197,9 +228,65 @@ class UserViewSet(ModelViewSet):
                 serializer.validated_data.get('new_password')
             )
             request.user.save()
-            return Response(status=status.HTTP_200_OK)
-        return Response('wrong password', status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                data={'detail': 'changed'}, status=status.HTTP_200_OK
+            )
+        return Response(
+            data={'detail': 'wrong password'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
 
     def perform_destroy(self, instance):
         delete_user_session(instance.pk)
         return super().perform_destroy(instance)
+
+
+class DocumentViewSet(
+    GenericViewSet,
+    RetrieveModelMixin,
+    CreateModelMixin,
+    ListModelMixin,
+    DestroyModelMixin
+):
+    queryset = Document.objects.all()
+    serializer_class = DocumentSerializer
+    permission_classes = [IsAuthenticated,]
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return DocumentPostSerializer
+        return super().get_serializer_class()
+
+    def list(self, request):
+        queryset = Document.objects.filter(owner=request.user)
+        serializer = DocumentListSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = DocumentRetrieveSerializer(instance)
+        return Response(serializer.data)
+
+    def perform_create(self, serializer):
+        raw_data = serializer.validated_data['document'].read()
+        time_start = perf_counter()
+        freq = count_tf(raw_data, settings.ANALYZER_MIN_WORD_LENGTH)
+        time_end = perf_counter()
+        serializer.save(
+            owner=self.request.user,
+            word_frequency=freq,
+            time_processed=time_end - time_start
+        )
+
+    @action(
+        methods=['GET'],
+        detail=True,
+        url_path='statistics'
+    )
+    def get_statistic(self, request, *args, **kwargs):
+        pk = kwargs.get('pk', None)
+        a = Document.objects.get(id=pk)
+        
+        a = self.get_object()
+        b = a.collection.all()
+        return Response(f'stata - {b}', status=status.HTTP_200_OK)

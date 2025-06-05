@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.db import transaction
 
 from users.models import User
+from analyzer.models import Document, Collection
 
 
 class StatusSerializer(serializers.Serializer):
@@ -42,9 +43,9 @@ class PasswordSerializer(serializers.BaseSerializer):
                 'new_password': 'Обязательное поле'
             })
         if len(new_password) < 8:
-            raise serializers.ValidationError(
-                'Длина пароля должна быть не меньше 8 символов'
-            )
+            raise serializers.ValidationError({
+                'detail': 'Длина пароля должна быть не меньше 8 символов'
+            })
         return data
 
 
@@ -87,3 +88,59 @@ class UserPostSerializer(serializers.ModelSerializer):
         if password:
             instance.set_password(password)
         return super().update(instance, validated_data)
+
+
+class DocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Document
+        fields = (
+            'id',
+            'document',
+            'owner',
+            'word_frequency',
+            'time_processed'
+        )
+
+
+class DocumentPostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Document
+        fields = (
+            'document',
+        )
+
+
+class DocumentListSerializer(serializers.ModelSerializer):
+    title = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Document
+        fields = (
+            'id',
+            'title'
+        )
+
+    def get_title(self, obj):
+        return obj.document.name
+
+
+class DocumentRetrieveSerializer(serializers.ModelSerializer):
+    content = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Document
+        fields = (
+            'id',
+            'content'
+        )
+
+    def get_content(self, obj):
+        try:
+            with open(obj.document.path, encoding='utf8') as f:
+                data = f.read()
+            return data
+        except Exception:
+            return None
+
+
+#class DocText

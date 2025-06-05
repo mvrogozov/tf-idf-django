@@ -1,4 +1,8 @@
 from django.db import models
+from django.conf import settings
+
+
+User = settings.AUTH_USER_MODEL
 
 
 class Document(models.Model):
@@ -15,6 +19,34 @@ class Document(models.Model):
         blank=True,
         verbose_name='время обработки, c'
     )
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='пользователь',
+        related_name='document',
+        blank=True,
+        null=True
+    )
 
     def __str__(self):
-        return self.document.name
+        return f'{self.id} {self.document.name}'
+
+
+class Collection(models.Model):
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='пользователь',
+        related_name='collection',
+        blank=True,
+        null=True
+    )
+    documents = models.ManyToManyField(
+        to=Document,
+        blank=True,
+        related_name='collection',
+        verbose_name='документы'
+    )
+
+    def __str__(self):
+        return f'{self.owner.username} {self.id}' if self.owner else self.id

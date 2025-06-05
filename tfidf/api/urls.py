@@ -8,7 +8,8 @@ from rest_framework.routers import DefaultRouter
 from djoser.views import UserViewSet as DjUserViewSet
 
 from api.views import (
-    StatusView, MetricsView, VersionView, LogoutView, UserViewSet
+    StatusView, MetricsView, VersionView, LogoutView, UserViewSet,
+    DocumentViewSet
 )
 
 app_name = 'api'
@@ -17,6 +18,7 @@ API_VERSION = 'v1/'
 router = DefaultRouter()
 
 router.register('users', UserViewSet, basename='api_users')
+router.register('documents', DocumentViewSet, basename='api_documents')
 
 
 urlpatterns = [
