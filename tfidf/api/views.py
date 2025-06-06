@@ -1,5 +1,6 @@
 from time import perf_counter
 
+import chardet
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -21,7 +22,8 @@ from .serializers import (
     StatusSerializer, MetricSerializer, VersionSerializer,
     UserSerializer, UserPostSerializer, PasswordSerializer,
     DocumentSerializer, DocumentPostSerializer, DocumentListSerializer,
-    DocumentRetrieveSerializer
+    DocumentRetrieveSerializer, CollectionStatsSerializer,
+    CollectionSerializer, CollectionRetrieveSerializer, WordStatSerializer
 )
 from core.utils import delete_user_session, count_tf, count_idfs
 from .permissions import IsOwnerOrStaff
@@ -257,6 +259,11 @@ class DocumentViewSet(
             return DocumentPostSerializer
         return super().get_serializer_class()
 
+    def get_permissions(self):
+        if self.request.method == 'DELETE':
+            return [IsOwnerOrStaff(),]
+        return super().get_permissions()
+
     def list(self, request):
         queryset = Document.objects.filter(owner=request.user)
         serializer = DocumentListSerializer(queryset, many=True)
@@ -270,7 +277,12 @@ class DocumentViewSet(
     def perform_create(self, serializer):
         raw_data = serializer.validated_data['document'].read()
         time_start = perf_counter()
-        freq = count_tf(raw_data, settings.ANALYZER_MIN_WORD_LENGTH)
+        try:
+            data = raw_data.decode('utf-8')
+        except UnicodeDecodeError:
+            encoding = chardet.detect(raw_data)['encoding']
+            data = raw_data.decode(encoding)
+        freq = count_tf(data, settings.ANALYZER_MIN_WORD_LENGTH)
         time_end = perf_counter()
         serializer.save(
             owner=self.request.user,
@@ -284,9 +296,98 @@ class DocumentViewSet(
         url_path='statistics'
     )
     def get_statistic(self, request, *args, **kwargs):
-        pk = kwargs.get('pk', None)
-        a = Document.objects.get(id=pk)
-        
-        a = self.get_object()
-        b = a.collection.all()
-        return Response(f'stata - {b}', status=status.HTTP_200_OK)
+        doc: Document = self.get_object()
+        collections = doc.collection.all()
+        result = {}
+        word_stat = {}
+        freqs = {
+            k: v for k, v in sorted(
+                doc.word_frequency.items(),
+                key=lambda item: item[1]
+                )[:settings.ANALYZER_WORDS_LIMIT]
+        }
+        for coll in collections:
+            idfs = count_idfs(freqs, coll.documents.all())
+            word_stat = {
+                word: {
+                    'tf': freqs[word],
+                    'idf': idfs[word]
+                } for word in freqs}
+            result.update({coll.id: word_stat})
+        serializer = CollectionStatsSerializer(data={
+            'collection_stats': result
+        })
+        serializer.is_valid(raise_exception=True)
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK
+        )
+
+
+class CollectionViewSet(
+    GenericViewSet,
+    CreateModelMixin,
+    ListModelMixin,
+    RetrieveModelMixin,
+    DestroyModelMixin,
+):
+    queryset = Collection.objects.all()
+    serializer_class = CollectionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return CollectionRetrieveSerializer
+        return super().get_serializer_class()
+    
+    @action(
+        methods=['GET'],
+        detail=True,
+        url_path='statistics'
+    )
+    def get_statistic(self, request, *args, **kwargs):
+        coll = self.get_object()
+        documents = coll.documents.all()
+        result = {}
+        freqs = {}
+        text = ''
+        for document in documents:
+            text += ' '.join(document.word_frequency.keys()) + ' '
+            freqs = count_tf(text, settings.ANALYZER_MIN_WORD_LENGTH)
+        idfs = count_idfs(freqs, documents)
+        result = {
+            coll.id: {
+                word: {'tf': freqs[word], 'idf': idfs[word]}
+                for word in freqs.keys()
+            }
+        }
+        # doc: Document = self.get_object()
+        # collections = doc.collection.all()
+        # result = {}
+        # word_stat = {}
+        # freqs = {
+        #     k: v for k, v in sorted(
+        #         doc.word_frequency.items(),
+        #         key=lambda item: item[1]
+        #         )[:settings.ANALYZER_WORDS_LIMIT]
+        # }
+        # for coll in collections:
+        #     idfs = count_idfs(freqs, coll.documents.all())
+        #     word_stat = {
+        #         word: {
+        #             'tf': freqs[word],
+        #             'idf': idfs[word]
+        #         } for word in freqs}
+        #     result.update({coll.id: word_stat})
+        # serializer = CollectionStatsSerializer(data={
+        #     'collection_stats': result
+        # })
+        # serializer.is_valid(raise_exception=True)
+        serializer = CollectionStatsSerializer(data={
+            'collection_stats': result
+        })
+        serializer.is_valid(raise_exception=True)
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK
+        )

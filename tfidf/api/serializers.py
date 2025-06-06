@@ -143,4 +143,32 @@ class DocumentRetrieveSerializer(serializers.ModelSerializer):
             return None
 
 
-#class DocText
+class WordStatSerializer(serializers.Serializer):
+    tf = serializers.FloatField()
+    idf = serializers.FloatField()
+
+
+class CollectionStatsSerializer(serializers.Serializer):
+    collection_stats = serializers.DictField(
+        child=serializers.DictField(child=WordStatSerializer())
+    )
+
+
+class CollectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Collection
+        fields = (
+            'id',
+            'documents',
+        )
+
+
+class CollectionRetrieveSerializer(serializers.ModelSerializer):
+    documents = DocumentListSerializer(many=True)
+
+    class Meta:
+        model = Collection
+        fields = (
+            'id',
+            'documents'
+        )

@@ -9,7 +9,7 @@ from djoser.views import UserViewSet as DjUserViewSet
 
 from api.views import (
     StatusView, MetricsView, VersionView, LogoutView, UserViewSet,
-    DocumentViewSet
+    DocumentViewSet, CollectionViewSet
 )
 
 app_name = 'api'
@@ -19,6 +19,7 @@ router = DefaultRouter()
 
 router.register('users', UserViewSet, basename='api_users')
 router.register('documents', DocumentViewSet, basename='api_documents')
+router.register('collections', CollectionViewSet, basename='api_collections')
 
 
 urlpatterns = [

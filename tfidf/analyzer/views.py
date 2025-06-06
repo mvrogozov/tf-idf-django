@@ -22,9 +22,15 @@ class DocumentCreateView(CreateView):
         time_start = perf_counter()
         doc = form.save(commit=False)
         raw_data = form.cleaned_data['document'].read()
-        freq = count_tf(raw_data, settings.ANALYZER_MIN_WORD_LENGTH)
+        try:
+            data = raw_data.decode('utf-8')
+        except UnicodeDecodeError:
+            encoding = chardet.detect(raw_data)['encoding']
+            data = raw_data.decode(encoding)
+        freq = count_tf(data, settings.ANALYZER_MIN_WORD_LENGTH)
         doc.word_frequency = freq
         doc.time_processed = str(perf_counter() - time_start)
+        doc.owner = self.request.user
         doc.save()
         return redirect('analyzer:report', doc.id)
 

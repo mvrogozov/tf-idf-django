@@ -14,12 +14,12 @@ def delete_user_session(user_id: int):
             session.delete()
 
 
-def count_tf(raw_data: str, min_word_len: int) -> dict[str, float]:
-    try:
-        data = raw_data.decode('utf-8')
-    except UnicodeDecodeError:
-        encoding = chardet.detect(raw_data)['encoding']
-        data = raw_data.decode(encoding)
+def count_tf(data: str, min_word_len: int) -> dict[str, float]:
+    # try:
+    #     data = raw_data.decode('utf-8')
+    # except UnicodeDecodeError:
+    #     encoding = chardet.detect(raw_data)['encoding']
+    #     data = raw_data.decode(encoding)
 
     morph = pymorphy2.MorphAnalyzer()
     freq = {}
@@ -37,7 +37,7 @@ def count_tf(raw_data: str, min_word_len: int) -> dict[str, float]:
     return freq
 
 
-def count_idfs(tfs: dict[str, float], docs: QuerySet):
+def count_idfs(tfs: dict[str, float], docs: QuerySet) -> dict[str, float]:
     idfs = {}
     docs_amount = docs.count()
     for word, tf in tfs.items():

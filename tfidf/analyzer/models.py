@@ -28,6 +28,11 @@ class Document(models.Model):
         null=True
     )
 
+    def delete(self, *args, **kwargs):
+        if self.document:
+            self.document.storage.delete(self.document.name)
+        super().delete(*args, **kwargs)
+
     def __str__(self):
         return f'{self.id} {self.document.name}'
 
