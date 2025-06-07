@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from django.conf import settings
 from django.db.models import Min, Max, Avg, Count
 from django.contrib.sessions.models import Session
+from django.shortcuts import get_object_or_404
 from django.contrib.auth import logout as auth_logout
 from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -282,7 +283,11 @@ class DocumentViewSet(
         except UnicodeDecodeError:
             encoding = chardet.detect(raw_data)['encoding']
             data = raw_data.decode(encoding)
-        freq = count_tf(data, settings.ANALYZER_MIN_WORD_LENGTH)
+        freq = count_tf(
+            data,
+            settings.ANALYZER_MIN_WORD_LENGTH,
+            normalize=True
+        )
         time_end = perf_counter()
         serializer.save(
             owner=self.request.user,
@@ -339,7 +344,10 @@ class CollectionViewSet(
         if self.action == 'list':
             return CollectionRetrieveSerializer
         return super().get_serializer_class()
-    
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
     @action(
         methods=['GET'],
         detail=True,
@@ -361,28 +369,6 @@ class CollectionViewSet(
                 for word in freqs.keys()
             }
         }
-        # doc: Document = self.get_object()
-        # collections = doc.collection.all()
-        # result = {}
-        # word_stat = {}
-        # freqs = {
-        #     k: v for k, v in sorted(
-        #         doc.word_frequency.items(),
-        #         key=lambda item: item[1]
-        #         )[:settings.ANALYZER_WORDS_LIMIT]
-        # }
-        # for coll in collections:
-        #     idfs = count_idfs(freqs, coll.documents.all())
-        #     word_stat = {
-        #         word: {
-        #             'tf': freqs[word],
-        #             'idf': idfs[word]
-        #         } for word in freqs}
-        #     result.update({coll.id: word_stat})
-        # serializer = CollectionStatsSerializer(data={
-        #     'collection_stats': result
-        # })
-        # serializer.is_valid(raise_exception=True)
         serializer = CollectionStatsSerializer(data={
             'collection_stats': result
         })
@@ -391,3 +377,18 @@ class CollectionViewSet(
             serializer.data,
             status=status.HTTP_200_OK
         )
+
+    @action(
+        methods=['POST', 'DELETE'],
+        detail=True,
+        url_path='document/(?P<document_id>[^/.]+)'
+    )
+    def add_delete_document(self, request, *args, **kwargs):
+        collection = self.get_object()
+        doc = get_object_or_404(Document, pk=kwargs.get('document_id'))
+        if request.method == 'POST':
+            collection.documents.add(doc)
+        else:
+            collection.documents.remove(doc)
+        serializer = CollectionRetrieveSerializer(collection)
+        return Response(serializer.data)

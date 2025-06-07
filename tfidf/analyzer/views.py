@@ -27,7 +27,11 @@ class DocumentCreateView(CreateView):
         except UnicodeDecodeError:
             encoding = chardet.detect(raw_data)['encoding']
             data = raw_data.decode(encoding)
-        freq = count_tf(data, settings.ANALYZER_MIN_WORD_LENGTH)
+        freq = count_tf(
+            data,
+            settings.ANALYZER_MIN_WORD_LENGTH,
+            normalize=True
+        )
         doc.word_frequency = freq
         doc.time_processed = str(perf_counter() - time_start)
         doc.owner = self.request.user
@@ -39,7 +43,7 @@ class ReportView(ListView):
     template_name = 'analyzer/report.html'
 
     def get_queryset(self):
-        self.doc = get_object_or_404(Document, pk=self.kwargs['doc_id'])
+        self.doc = get_object_or_404(Document, pk=self.kwargs['document_id'])
         return self.doc
 
     def get_context_data(self, **kwargs):

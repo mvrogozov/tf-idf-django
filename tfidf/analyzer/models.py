@@ -54,4 +54,6 @@ class Collection(models.Model):
     )
 
     def __str__(self):
-        return f'{self.owner.username} {self.id}' if self.owner else self.id
+        return (
+            f'{self.owner.username} {self.id}' if self.owner else str(self.id)
+        )
