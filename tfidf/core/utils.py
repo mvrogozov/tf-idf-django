@@ -1,9 +1,10 @@
+import math
+import re
+
+import chardet
+import pymorphy2
 from django.contrib.sessions.models import Session
 from django.db.models.query import QuerySet
-import pymorphy2
-import chardet
-import re
-import math
 
 
 def delete_user_session(user_id: int):

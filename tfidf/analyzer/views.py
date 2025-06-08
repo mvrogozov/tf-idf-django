@@ -1,17 +1,15 @@
-import math
-import re
 from time import perf_counter
 
-import pymorphy2
 import chardet
 from django.conf import settings
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import CreateView, ListView
 
+from core.utils import count_idfs, count_tf
+
 from .forms import DocumentForm
 from .models import Document
-from core.utils import count_tf, count_idfs
 
 
 class DocumentCreateView(CreateView):

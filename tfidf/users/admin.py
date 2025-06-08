@@ -11,8 +11,6 @@ class MyUserAdmin(UserAdmin):
             return self.add_fieldsets
 
         if request.user.is_superuser:
-            # perm_fields = ('is_active', 'is_staff', 'is_superuser',
-            #                'groups', 'user_permissions')
             perm_fields = (
                 'is_active', 'is_staff', 'user_permissions', 'groups'
             )
@@ -23,9 +21,13 @@ class MyUserAdmin(UserAdmin):
             perm_fields = ()
 
         return [(None, {'fields': ('username', 'password')}),
-                (_('Personal info'), {'fields': ('first_name', 'last_name', 'email')}),
+                (_('Personal info'), {
+                    'fields': ('first_name', 'last_name', 'email')
+                }),
                 (_('Permissions'), {'fields': perm_fields}),
-                (_('Important dates'), {'fields': ('last_login', 'date_joined')})]
+                (_('Important dates'), {
+                    'fields': ('last_login', 'date_joined')
+                })]
 
 
 admin.site.register(User, MyUserAdmin)

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Document, Collection
+from .models import Collection, Document
 
 
 @admin.register(Document)

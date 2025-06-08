@@ -1,35 +1,31 @@
 from time import perf_counter
 
 import chardet
-from rest_framework.views import APIView
-from rest_framework.response import Response
+from django.conf import settings
+from django.db.models import Avg, Count, Max, Min
+from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
-from django.conf import settings
-from django.db.models import Min, Max, Avg, Count
-from django.contrib.sessions.models import Session
-from django.shortcuts import get_object_or_404
-from django.contrib.auth import logout as auth_logout
-from drf_spectacular.utils import extend_schema, OpenApiResponse
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.viewsets import (
-    ModelViewSet, ReadOnlyModelViewSet, GenericViewSet
-)
-from rest_framework.mixins import (
-    CreateModelMixin, RetrieveModelMixin, ListModelMixin, DestroyModelMixin,
-)
+from rest_framework.mixins import (CreateModelMixin, DestroyModelMixin,
+                                   ListModelMixin, RetrieveModelMixin)
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
-from .serializers import (
-    StatusSerializer, MetricSerializer, VersionSerializer,
-    UserSerializer, UserPostSerializer, PasswordSerializer,
-    DocumentSerializer, DocumentPostSerializer, DocumentListSerializer,
-    DocumentRetrieveSerializer, CollectionStatsSerializer,
-    CollectionSerializer, CollectionRetrieveSerializer, WordStatSerializer
-)
-from core.utils import delete_user_session, count_tf, count_idfs
-from .permissions import IsOwnerOrStaff
-from analyzer.models import Document, Collection
+from analyzer.models import Collection, Document
+from core.utils import count_idfs, count_tf, delete_user_session
 from users.models import User
+
+from .permissions import IsOwnerOrStaff
+from .serializers import (CollectionRetrieveSerializer, CollectionSerializer,
+                          CollectionStatsSerializer, DocumentListSerializer,
+                          DocumentPostSerializer, DocumentRetrieveSerializer,
+                          DocumentSerializer, MetricSerializer,
+                          PasswordSerializer, StatusSerializer,
+                          UserPostSerializer, UserSerializer,
+                          VersionSerializer)
 
 
 class StatusView(APIView):
@@ -261,10 +257,10 @@ class DocumentViewSet(
         return super().get_permissions()
 
     @extend_schema(
-        summary="Document list",
+        summary="Document list for current user",
         responses={
             200: OpenApiResponse(response=DocumentListSerializer,
-                                 description='Document list'),
+                                 description='Document list for current user'),
         },
     )
     def list(self, request):
@@ -273,10 +269,10 @@ class DocumentViewSet(
         return Response(serializer.data)
 
     @extend_schema(
-        summary="Document statistics",
+        summary="Document content",
         responses={
             200: OpenApiResponse(response=DocumentRetrieveSerializer,
-                                 description='Document statistics'),
+                                 description='Document content'),
         },
     )
     def retrieve(self, request, *args, **kwargs):

@@ -1,16 +1,11 @@
-from django.urls import path, include
-from drf_spectacular.views import (
-    SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
-)
-from rest_framework_simplejwt import views as jwt_views
+from django.urls import include, path
+from drf_spectacular.views import (SpectacularAPIView, SpectacularRedocView,
+                                   SpectacularSwaggerView)
 from rest_framework.routers import DefaultRouter
+from rest_framework_simplejwt import views as jwt_views
 
-from djoser.views import UserViewSet as DjUserViewSet
-
-from api.views import (
-    StatusView, MetricsView, VersionView, LogoutView, UserViewSet,
-    DocumentViewSet, CollectionViewSet
-)
+from api.views import (CollectionViewSet, DocumentViewSet, LogoutView,
+                       MetricsView, StatusView, UserViewSet, VersionView)
 
 app_name = 'api'
 API_VERSION = 'v1/'

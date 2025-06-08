@@ -1,8 +1,8 @@
-from rest_framework import serializers
 from django.db import transaction
+from rest_framework import serializers
 
+from analyzer.models import Collection, Document
 from users.models import User
-from analyzer.models import Document, Collection
 
 
 class StatusSerializer(serializers.Serializer):
