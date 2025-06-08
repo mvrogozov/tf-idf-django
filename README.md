@@ -69,9 +69,14 @@ sudo docker compose up
 ***
 ## Генерация клиента для python
 Для генерации клиента необходимо установить open-api-client командой 
-```pip install openapi-python-client``` в теминале bash.
+```
+pip install openapi-python-client
+``` 
+в теминале bash.
 После этого сгенерировать клиент командой 
-```openapi-python-client generate --path PATH-TO-SCHEMA/schema.yml```
+```
+openapi-python-client generate --path PATH-TO-SCHEMA/schema.yml
+```
 Получим папку с клиентом. Описание работы с ним доступно в этой папке в файле README.md
 Пример файла с запросом: [client_example.py](client_example.py)
 ***
