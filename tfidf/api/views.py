@@ -1,13 +1,50 @@
+from time import perf_counter
+
+import chardet
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.decorators import action
+from django.conf import settings
 from django.db.models import Min, Max, Avg, Count
+from django.contrib.sessions.models import Session
+from django.shortcuts import get_object_or_404
+from django.contrib.auth import logout as auth_logout
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.viewsets import (
+    ModelViewSet, ReadOnlyModelViewSet, GenericViewSet
+)
+from rest_framework.mixins import (
+    CreateModelMixin, RetrieveModelMixin, ListModelMixin, DestroyModelMixin,
+)
 
-from .serializers import StatusSerializer, MetricSerializer, VersionSerializer
-from analyzer.models import Document
+from .serializers import (
+    StatusSerializer, MetricSerializer, VersionSerializer,
+    UserSerializer, UserPostSerializer, PasswordSerializer,
+    DocumentSerializer, DocumentPostSerializer, DocumentListSerializer,
+    DocumentRetrieveSerializer, CollectionStatsSerializer,
+    CollectionSerializer, CollectionRetrieveSerializer, WordStatSerializer
+)
+from core.utils import delete_user_session, count_tf, count_idfs
+from .permissions import IsOwnerOrStaff
+from analyzer.models import Document, Collection
+from users.models import User
 
 
 class StatusView(APIView):
+    @extend_schema(
+        description="Status",
+        request=None,
+        responses={
+            200: {
+                'type': 'object', 'properties': {'status': {'type': 'string'}}
+            },
+            401: {
+                'type': 'object', 'properties': {'detail': {'type': 'string'}}
+            }
+        }
+    )
     def get(self, request):
         status_message = 'OK'
         data = {
@@ -18,6 +55,18 @@ class StatusView(APIView):
 
 
 class VersionView(APIView):
+    @extend_schema(
+        description="Version",
+        request=None,
+        responses={
+            200: {
+                'type': 'object', 'properties': {'version': {'type': 'string'}}
+            },
+            401: {
+                'type': 'object', 'properties': {'detail': {'type': 'string'}}
+            }
+        }
+    )
     def get(self, request):
         message = 'V1.0.1'
         data = {
@@ -28,6 +77,13 @@ class VersionView(APIView):
 
 
 class MetricsView(APIView):
+    @extend_schema(
+        summary="Metrics",
+        responses={
+            200: OpenApiResponse(response=MetricSerializer,
+                                 description='Metrics'),
+        },
+    )
     def get(self, request):
         objs = Document.objects.all()
         if not objs:
@@ -66,3 +122,326 @@ class MetricsView(APIView):
             }
         serializer = MetricSerializer(data)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class LogoutView(APIView):
+    @extend_schema(
+        description="Logout",
+        request=None,
+        responses={
+            200: {
+                'type': 'object', 'properties': {'status': {'type': 'string'}}
+            },
+            401: {
+                'type': 'object', 'properties': {'detail': {'type': 'string'}}
+            }
+        }
+    )
+    def get(self, request):
+        status_message = 'OK'
+        data = {
+            'status': status_message
+        }
+        response = Response(data=data, status=status.HTTP_200_OK)
+        delete_user_session(request.user.pk)
+        return response
+
+
+class UserViewSet(ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = (IsOwnerOrStaff,)
+
+    def get_serializer_class(self):
+        if self.request.method in ['POST', 'PATCH', 'PUT']:
+            return UserPostSerializer
+        return UserSerializer
+
+    @extend_schema(
+        summary='Add user',
+        responses={
+            201: {
+                'type': 'object', 'properties': {
+                    'username': {'type': 'string'},
+                    'password': {'type': 'string'}
+                }
+            },
+        },
+    )
+    @action(
+        detail=False,
+        methods=['post'],
+        permission_classes=[AllowAny],
+        url_name='register',
+        url_path='register'
+    )
+    def register(self, request):
+        return self.create(request)
+
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[IsAuthenticated]
+    )
+    def me(self, request):
+        serializer = UserSerializer(instance=request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary='Change password for current user',
+        responses={
+            200: {
+                'type': 'object', 'properties': {'detail': {'type': 'string'}}
+            },
+            400: {
+                'type': 'object', 'properties': {'detail': {'type': 'string'}}
+            },
+            401: {
+                'type': 'object', 'properties': {'detail': {'type': 'string'}}
+            }
+        },
+        request={
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {
+                    "current_password": {"type": "string"},
+                    "new_password": {"type": "string"},
+                },
+            },
+        }
+    )
+    @action(
+        detail=False,
+        methods=['post'],
+        permission_classes=[IsAuthenticated]
+    )
+    def set_password(self, request):
+        serializer = PasswordSerializer(data=request.data)
+        serializer.validate(request.data)
+        serializer.is_valid(raise_exception=True)
+        if request.user.check_password(
+            serializer.validated_data.get('current_password')
+        ):
+            request.user.set_password(
+                serializer.validated_data.get('new_password')
+            )
+            request.user.save()
+            return Response(
+                data={'detail': 'changed'}, status=status.HTTP_200_OK
+            )
+        return Response(
+            data={'detail': 'wrong password'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    def perform_destroy(self, instance):
+        delete_user_session(instance.pk)
+        return super().perform_destroy(instance)
+
+
+class DocumentViewSet(
+    GenericViewSet,
+    RetrieveModelMixin,
+    CreateModelMixin,
+    ListModelMixin,
+    DestroyModelMixin
+):
+    queryset = Document.objects.all()
+    serializer_class = DocumentSerializer
+    permission_classes = [IsAuthenticated,]
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return DocumentPostSerializer
+        return super().get_serializer_class()
+
+    def get_permissions(self):
+        if self.request.method == 'DELETE':
+            return [IsOwnerOrStaff(),]
+        return super().get_permissions()
+
+    @extend_schema(
+        summary="Document list",
+        responses={
+            200: OpenApiResponse(response=DocumentListSerializer,
+                                 description='Document list'),
+        },
+    )
+    def list(self, request):
+        queryset = Document.objects.filter(owner=request.user)
+        serializer = DocumentListSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @extend_schema(
+        summary="Document statistics",
+        responses={
+            200: OpenApiResponse(response=DocumentRetrieveSerializer,
+                                 description='Document statistics'),
+        },
+    )
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = DocumentRetrieveSerializer(instance)
+        return Response(serializer.data)
+
+    @extend_schema(
+        responses={
+            201: {
+                'type': 'object', 'properties': {
+                    'document': {'type': 'string'}
+                }
+            },
+        },
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                    'document': {'type': 'string', 'format': 'binary'}},
+            },
+        },
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        raw_data = serializer.validated_data['document'].read()
+        time_start = perf_counter()
+        try:
+            data = raw_data.decode('utf-8')
+        except UnicodeDecodeError:
+            encoding = chardet.detect(raw_data)['encoding']
+            data = raw_data.decode(encoding)
+        freq = count_tf(
+            data,
+            settings.ANALYZER_MIN_WORD_LENGTH,
+            normalize=True
+        )
+        time_end = perf_counter()
+        serializer.save(
+            owner=self.request.user,
+            word_frequency=freq,
+            time_processed=time_end - time_start
+        )
+
+    @extend_schema(
+        summary="Document statistics by collection.",
+        responses={
+            200: OpenApiResponse(response=CollectionStatsSerializer,
+                                 description='Document statistics'),
+        },
+    )
+    @action(
+        methods=['GET'],
+        detail=True,
+        url_path='statistics'
+    )
+    def get_statistic(self, request, *args, **kwargs):
+        doc: Document = self.get_object()
+        collections = doc.collection.all()
+        result = {}
+        word_stat = {}
+        freqs = {
+            k: v for k, v in sorted(
+                doc.word_frequency.items(),
+                key=lambda item: item[1]
+                )[:settings.ANALYZER_WORDS_LIMIT]
+        }
+        for coll in collections:
+            idfs = count_idfs(freqs, coll.documents.all())
+            word_stat = {
+                word: {
+                    'tf': freqs[word],
+                    'idf': idfs[word]
+                } for word in freqs}
+            result.update({coll.id: word_stat})
+        serializer = CollectionStatsSerializer(data={
+            'collection_stats': result
+        })
+        serializer.is_valid(raise_exception=True)
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK
+        )
+
+
+class CollectionViewSet(
+    GenericViewSet,
+    CreateModelMixin,
+    ListModelMixin,
+    RetrieveModelMixin,
+    DestroyModelMixin,
+):
+    queryset = Collection.objects.all()
+    serializer_class = CollectionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return CollectionRetrieveSerializer
+        return super().get_serializer_class()
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+    @extend_schema(
+        summary="Collection statistics",
+        responses={
+            200: OpenApiResponse(response=CollectionStatsSerializer,
+                                 description='Collection statistics'),
+        },
+    )
+    @action(
+        methods=['GET'],
+        detail=True,
+        url_path='statistics'
+    )
+    def get_statistic(self, request, *args, **kwargs):
+        coll = self.get_object()
+        documents = coll.documents.all()
+        result = {}
+        freqs = {}
+        text = ''
+        for document in documents:
+            text += ' '.join(document.word_frequency.keys()) + ' '
+            freqs = count_tf(text, settings.ANALYZER_MIN_WORD_LENGTH)
+        idfs = count_idfs(freqs, documents)
+        result = {
+            coll.id: {
+                word: {'tf': freqs[word], 'idf': idfs[word]}
+                for word in freqs.keys()
+            }
+        }
+        serializer = CollectionStatsSerializer(data={
+            'collection_stats': result
+        })
+        serializer.is_valid(raise_exception=True)
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK
+        )
+
+    @extend_schema(
+        summary="Add/delete document to collection",
+        responses={
+            201: OpenApiResponse(response=CollectionRetrieveSerializer,
+                                 description='Added. Collection in response'),
+            204: OpenApiResponse(response=None,
+                                 description='Deleted.')
+        },
+    )
+    @action(
+        methods=['POST', 'DELETE'],
+        detail=True,
+        url_path='document/(?P<document_id>[^/.]+)'
+    )
+    def add_delete_document(self, request, *args, **kwargs):
+        collection = self.get_object()
+        doc = get_object_or_404(Document, pk=kwargs.get('document_id'))
+        if request.method == 'POST':
+            collection.documents.add(doc)
+        else:
+            collection.documents.remove(doc)
+        serializer = CollectionRetrieveSerializer(collection)
+        if request.method == 'POST':
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.data, status=status.HTTP_204_NO_CONTENT)

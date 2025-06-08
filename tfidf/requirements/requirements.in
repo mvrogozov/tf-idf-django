@@ -5,3 +5,5 @@ pymorphy2
 djangorestframework
 chardet
 drf-spectacular
+djangorestframework-simplejwt
+djoser

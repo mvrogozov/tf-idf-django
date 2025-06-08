@@ -8,6 +8,17 @@
       </a>
       <nav class="main-nav">
         <a href="{% url 'analyzer:index' %}" class="nav-link">Главная</a>
+        {% if user.is_authenticated %}
+          <div class="user-nav">
+            <span class="username">{{ user.username }}</span>
+            <form action="{% url 'users:logout' %}" method="post" class="logout-form">
+              {% csrf_token %}
+              <button type="submit" class="submit-button">Выйти</button>
+            </form>
+          </div>
+        {% else %}
+          <a href="{% url 'users:login' %}" class="submit-button">Войти</a>
+        {% endif %}
       </nav>
     </div>
   </div>
