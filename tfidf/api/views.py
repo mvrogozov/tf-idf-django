@@ -64,7 +64,7 @@ class VersionView(APIView):
         }
     )
     def get(self, request):
-        message = 'V1.0.1'
+        message = 'V1.1.0'
         data = {
             'version': message
         }
