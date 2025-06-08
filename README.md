@@ -77,7 +77,7 @@ pip install openapi-python-client
 ```
 openapi-python-client generate --path PATH-TO-SCHEMA/schema.yml
 ```
-Получим папку с клиентом. Описание работы с ним доступно в этой папке в файле README.md
+Получим папку с клиентом. Описание работы с ним доступно в этой папке в файле README.md. 
 Пример файла с запросом: [client_example.py](client_example.py)
 ***
 ## Changelog
