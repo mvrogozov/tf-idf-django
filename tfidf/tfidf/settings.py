@@ -103,14 +103,6 @@ DATABASES = {
         'PORT': os.getenv('DB_PORT', default=5432)
     }
 }
-# DATABASES = {
-#     # IF NOT PRODUCTION MODE, i.e. environment variable DJANGO_PRODUCTION is not set
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -144,10 +136,10 @@ if DEBUG:
                 'level': 'DEBUG',
             },
         },
-}
+    }
 
-ANALYZER_MIN_WORD_LENGTH = 3
-ANALYZER_WORDS_LIMIT = 10
+ANALYZER_MIN_WORD_LENGTH = int(os.getenv('ANALYZER_MIN_WORD_LENGTH', default=3))
+ANALYZER_WORDS_LIMIT = int(os.getenv('ANALYZER_WORDS_LIMIT', default=50))
 
 LANGUAGE_CODE = 'en-us'
 

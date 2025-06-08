@@ -10,7 +10,7 @@ from django.db.models import Min, Max, Avg, Count
 from django.contrib.sessions.models import Session
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import logout as auth_logout
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.viewsets import (
     ModelViewSet, ReadOnlyModelViewSet, GenericViewSet
@@ -60,7 +60,7 @@ class VersionView(APIView):
         request=None,
         responses={
             200: {
-                'type': 'object', 'properties': {'status': {'type': 'string'}}
+                'type': 'object', 'properties': {'version': {'type': 'string'}}
             },
             401: {
                 'type': 'object', 'properties': {'detail': {'type': 'string'}}
@@ -78,16 +78,11 @@ class VersionView(APIView):
 
 class MetricsView(APIView):
     @extend_schema(
-        description="Metrics",
-        request=None,
+        summary="Metrics",
         responses={
-            200: {
-                'type': 'string'
-            },
-            401: {
-                'type': 'object', 'properties': {'detail': {'type': 'string'}}
-            }
-        }
+            200: OpenApiResponse(response=MetricSerializer,
+                                 description='Metrics'),
+        },
     )
     def get(self, request):
         objs = Document.objects.all()
@@ -160,10 +155,19 @@ class UserViewSet(ModelViewSet):
     def get_serializer_class(self):
         if self.request.method in ['POST', 'PATCH', 'PUT']:
             return UserPostSerializer
-        # if self.request.method == 'PATCH':
-        #     return UserPasswordSerializer
         return UserSerializer
 
+    @extend_schema(
+        summary='Add user',
+        responses={
+            201: {
+                'type': 'object', 'properties': {
+                    'username': {'type': 'string'},
+                    'password': {'type': 'string'}
+                }
+            },
+        },
+    )
     @action(
         detail=False,
         methods=['post'],
@@ -173,15 +177,6 @@ class UserViewSet(ModelViewSet):
     )
     def register(self, request):
         return self.create(request)
-
-    # def partial_update(self, request, *args, **kwargs):
-    #     user = self.get_object()
-    #     serializer = self.get_serializer(user, data=request.data, partial=True)
-    #     serializer.is_valid(raise_exception=True)
-    #     user.set_password(serializer.validated_data.get('password'))
-    #     user.save()
-    #     #self.perform_update(serializer)
-    #     return Response(user.username)
 
     @action(
         detail=False,
@@ -265,15 +260,48 @@ class DocumentViewSet(
             return [IsOwnerOrStaff(),]
         return super().get_permissions()
 
+    @extend_schema(
+        summary="Document list",
+        responses={
+            200: OpenApiResponse(response=DocumentListSerializer,
+                                 description='Document list'),
+        },
+    )
     def list(self, request):
         queryset = Document.objects.filter(owner=request.user)
         serializer = DocumentListSerializer(queryset, many=True)
         return Response(serializer.data)
 
+    @extend_schema(
+        summary="Document statistics",
+        responses={
+            200: OpenApiResponse(response=DocumentRetrieveSerializer,
+                                 description='Document statistics'),
+        },
+    )
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = DocumentRetrieveSerializer(instance)
         return Response(serializer.data)
+
+    @extend_schema(
+        responses={
+            201: {
+                'type': 'object', 'properties': {
+                    'document': {'type': 'string'}
+                }
+            },
+        },
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                    'document': {'type': 'string', 'format': 'binary'}},
+            },
+        },
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         raw_data = serializer.validated_data['document'].read()
@@ -295,6 +323,13 @@ class DocumentViewSet(
             time_processed=time_end - time_start
         )
 
+    @extend_schema(
+        summary="Document statistics by collection.",
+        responses={
+            200: OpenApiResponse(response=CollectionStatsSerializer,
+                                 description='Document statistics'),
+        },
+    )
     @action(
         methods=['GET'],
         detail=True,
@@ -348,6 +383,13 @@ class CollectionViewSet(
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
+    @extend_schema(
+        summary="Collection statistics",
+        responses={
+            200: OpenApiResponse(response=CollectionStatsSerializer,
+                                 description='Collection statistics'),
+        },
+    )
     @action(
         methods=['GET'],
         detail=True,
@@ -378,6 +420,15 @@ class CollectionViewSet(
             status=status.HTTP_200_OK
         )
 
+    @extend_schema(
+        summary="Add/delete document to collection",
+        responses={
+            201: OpenApiResponse(response=CollectionRetrieveSerializer,
+                                 description='Added. Collection in response'),
+            204: OpenApiResponse(response=None,
+                                 description='Deleted.')
+        },
+    )
     @action(
         methods=['POST', 'DELETE'],
         detail=True,
@@ -391,4 +442,6 @@ class CollectionViewSet(
         else:
             collection.documents.remove(doc)
         serializer = CollectionRetrieveSerializer(collection)
-        return Response(serializer.data)
+        if request.method == 'POST':
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.data, status=status.HTTP_204_NO_CONTENT)
