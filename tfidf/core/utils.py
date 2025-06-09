@@ -100,21 +100,21 @@ def create_huffman_keys(data: dict[str, float]):
     # )]
     heap = []
     for k, v in data.items():
-        heapq.heappush(heap, (v, Node(value=k, weight=v)))
-    while len(data) > 1:
+        heapq.heappush(heap, Node(value=k, weight=v))
+    while len(heap) > 1:
         # node1 = data.pop()
         # node2 = data.pop()
-        w1, node1 = heapq.heappop(heap)
-        w2, node2 = heapq.heappop(heap)
+        node1 = heapq.heappop(heap)
+        node2 = heapq.heappop(heap)
         sum_node = Node(
-            weight=w1 + w2,
+            weight=node1.weight + node2.weight,
             left=node2,
             right=node1
         )
         #data = [sum_node] + data
-        heapq.heappush(heap, (sum_node.weight, sum_node))
+        heapq.heappush(heap, sum_node)
     if heap:
-        root = heap[0][1]
+        root = heap[0]
     else:
         root = None
     # print(init_data)
