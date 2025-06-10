@@ -138,8 +138,13 @@ if DEBUG:
         },
     }
 
-ANALYZER_MIN_WORD_LENGTH = int(os.getenv('ANALYZER_MIN_WORD_LENGTH', default=3))
+ANALYZER_MIN_WORD_LENGTH = int(
+    os.getenv('ANALYZER_MIN_WORD_LENGTH', default=3)
+)
 ANALYZER_WORDS_LIMIT = int(os.getenv('ANALYZER_WORDS_LIMIT', default=50))
+ANALYZER_USE_NORMALIZE = os.getenv(
+    'ANALYZER_USE_NORMALIZE', default=''
+) == 'True'
 
 LANGUAGE_CODE = 'en-us'
 

@@ -282,7 +282,7 @@ paths:
   /api/v1/documents/:
     get:
       operationId: v1_documents_list
-      summary: Document list
+      summary: Document list for current user
       tags:
       - v1
       security:
@@ -295,7 +295,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/DocumentList'
-          description: Document list
+          description: Document list for current user
     post:
       operationId: v1_documents_create
       tags:
@@ -324,7 +324,7 @@ paths:
   /api/v1/documents/{id}/:
     get:
       operationId: v1_documents_retrieve
-      summary: Document statistics
+      summary: Document content
       parameters:
       - in: path
         name: id
@@ -342,7 +342,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DocumentRetrieve'
-          description: Document statistics
+          description: Document content
     delete:
       operationId: v1_documents_destroy
       parameters:
@@ -359,6 +359,28 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/documents/{id}/huffman/:
+    get:
+      operationId: v1_documents_huffman_retrieve
+      summary: Encode document content by Huffman algorithm
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HuffmanEncode'
+          description: Encoded document
   /api/v1/documents/{id}/statistics/:
     get:
       operationId: v1_documents_statistics_retrieve
@@ -381,6 +403,35 @@ paths:
               schema:
                 $ref: '#/components/schemas/CollectionStats'
           description: Document statistics
+  /api/v1/documents/decode-text/:
+    post:
+      operationId: v1_documents_decode_text_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  format: string
+                code:
+                  type: string
+                  format: string
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  text:
+                    type: string
+          description: ''
   /api/v1/metrics/:
     get:
       operationId: v1_metrics_retrieve
@@ -748,6 +799,17 @@ components:
       required:
       - content
       - id
+    HuffmanEncode:
+      type: object
+      properties:
+        code:
+          type: object
+          additionalProperties: {}
+        encoded_text:
+          type: string
+      required:
+      - code
+      - encoded_text
     Metric:
       type: object
       properties:
