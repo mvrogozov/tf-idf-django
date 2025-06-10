@@ -38,6 +38,13 @@ sudo docker compose up
 ```
 ./migrate
 ```
+Для создания суперпользователя выполнить:
+```
+docker exec -it backend-tfidf bash
+```
+```
+python manage.py createsuperuser
+```
 Переменные окружения, необходимые для запуска:
 
 * DB_ENGINE - настройка ENGINE для БД в django.settings
