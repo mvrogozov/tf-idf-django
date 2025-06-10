@@ -172,3 +172,8 @@ class CollectionRetrieveSerializer(serializers.ModelSerializer):
             'id',
             'documents'
         )
+
+
+class HuffmanEncodeSerializer(serializers.Serializer):
+    code = serializers.DictField()
+    encoded_text = serializers.CharField()

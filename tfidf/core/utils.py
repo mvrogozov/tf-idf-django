@@ -1,55 +1,55 @@
-# import math
-# import re
+import math
+import re
 import heapq
 
-# import chardet
-# import pymorphy2
-# from django.contrib.sessions.models import Session
-# from django.db.models.query import QuerySet
+import chardet
+import pymorphy2
+from django.contrib.sessions.models import Session
+from django.db.models.query import QuerySet
 
 
-# def delete_user_session(user_id: int):
-#     sessions = Session.objects.all()
-#     for session in sessions:
-#         session_data = session.get_decoded()
-#         if str(user_id) == session_data.get('_auth_user_id', None):
-#             session.delete()
+def delete_user_session(user_id: int):
+    sessions = Session.objects.all()
+    for session in sessions:
+        session_data = session.get_decoded()
+        if str(user_id) == session_data.get('_auth_user_id', None):
+            session.delete()
 
 
-# def count_tf(
-#     data: str,
-#     min_word_len: int,
-#     normalize: bool = False
-# ) -> dict[str, float]:
-#     freq = {}
-#     text_length = 0
-#     morph = pymorphy2.MorphAnalyzer()
-#     for word in data.split():
-#         word = re.sub(r'[^\w\s-]', '', word)
-#         if len(word) < min_word_len:
-#             continue
-#         text_length += 1
-#         if normalize:
-#             word = morph.parse(word)[0].normal_form
-#         freq.setdefault(word, 0)
-#         freq[word] += 1
-#     for word, amount in freq.items():
-#         freq[word] = round(amount / text_length, 6)
-#     return freq
+def count_tf(
+    data: str,
+    min_word_len: int,
+    normalize: bool = False
+) -> dict[str, float]:
+    freq = {}
+    text_length = 0
+    morph = pymorphy2.MorphAnalyzer()
+    for word in data.split():
+        word = re.sub(r'[^\w\s-]', '', word).lower()
+        if len(word) < min_word_len:
+            continue
+        text_length += 1
+        if normalize:
+            word = morph.parse(word)[0].normal_form
+        freq.setdefault(word, 0)
+        freq[word] += 1
+    for word, amount in freq.items():
+        freq[word] = round(amount / text_length, 6)
+    return freq
 
 
-# def count_idfs(tfs: dict[str, float], docs: QuerySet) -> dict[str, float]:
-#     idfs = {}
-#     docs_amount = docs.count()
-#     for word, tf in tfs.items():
-#         amount_docs_with_word = docs.filter(
-#             word_frequency__has_key=word
-#         ).count()
-#         try:
-#             idfs[word] = math.log(docs_amount / (amount_docs_with_word))
-#         except ZeroDivisionError:
-#             continue
-#     return idfs
+def count_idfs(tfs: dict[str, float], docs: QuerySet) -> dict[str, float]:
+    idfs = {}
+    docs_amount = docs.count()
+    for word, tf in tfs.items():
+        amount_docs_with_word = docs.filter(
+            word_frequency__has_key=word
+        ).count()
+        try:
+            idfs[word] = math.log(docs_amount / (amount_docs_with_word))
+        except ZeroDivisionError:
+            continue
+    return idfs
 
 
 class Node:
@@ -94,16 +94,11 @@ def get_code(node: Node, cur: str, res: dict[str, str]):
         get_code(node.right, cur=cur + '1', res=res)
 
 
-def create_huffman_keys(data: dict[str, float]):
-    # data = [Node(value=k, weight=v) for k, v in sorted(
-    #     data.items(), key=lambda x: -x[1]
-    # )]
+def create_huffman_tree(data: dict[str, float]):
     heap = []
     for k, v in data.items():
         heapq.heappush(heap, Node(value=k, weight=v))
     while len(heap) > 1:
-        # node1 = data.pop()
-        # node2 = data.pop()
         node1 = heapq.heappop(heap)
         node2 = heapq.heappop(heap)
         sum_node = Node(
@@ -111,15 +106,36 @@ def create_huffman_keys(data: dict[str, float]):
             left=node2,
             right=node1
         )
-        #data = [sum_node] + data
         heapq.heappush(heap, sum_node)
     if heap:
         root = heap[0]
     else:
         root = None
-    # print(init_data)
-    # print_node(root)
     return root
+
+
+def huffman_encode(text: str, tf: dict[str, float]) -> tuple[str, dict[str, str]]:
+    root = create_huffman_tree(tf)
+    codes = {}
+    out_code = []
+    get_code(root, '', codes)
+    for word in text.split():
+        word = re.sub(r'[^\w\s-]', '', word).lower()
+        out_code.append(codes.get(word, ''))
+    return ''.join(out_code), codes
+
+
+def huffman_decode(text: str, code: dict[str, str]) -> str:
+    code_word = {v: k for k, v in code.items()}
+    cword = ''
+    result = ''
+    for letter in text:
+        cword += letter
+        word = code_word.get(cword)
+        if word:
+            result += f' {word}'
+            cword = ''
+    return result.strip()
 
 
 def main():
@@ -133,11 +149,19 @@ def main():
         "зверь": 0.090909,
         "поезд": 0.090909
     }
+    text = '''
+        тут ухо ключ банан батон батон дверь зверьё  поезд ключ дверь ключ
+'''
 
-    root = create_huffman_keys(data)
-    result = {}
-    get_code(root, '', result)
-    print(result)
+    # root = create_huffman_tree(data)
+    # codes = {}
+    # get_code(root, '', codes)
+    # print(codes)
+    encoded_text, codes = huffman_encode(text, data)
+    print(codes)
+    print(encoded_text)
+    decoded_text = huffman_decode(encoded_text, codes)
+    print(decoded_text + '"')
 
 
 if __name__ == '__main__':

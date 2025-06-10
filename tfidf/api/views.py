@@ -1,3 +1,4 @@
+import json
 from time import perf_counter
 
 import chardet
@@ -15,7 +16,10 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
 from analyzer.models import Collection, Document
-from core.utils import count_idfs, count_tf, delete_user_session
+from core.utils import (
+    count_idfs, count_tf, delete_user_session, huffman_encode, huffman_decode,
+    get_code
+)
 from users.models import User
 
 from .permissions import IsOwnerOrStaff
@@ -25,7 +29,7 @@ from .serializers import (CollectionRetrieveSerializer, CollectionSerializer,
                           DocumentSerializer, MetricSerializer,
                           PasswordSerializer, StatusSerializer,
                           UserPostSerializer, UserSerializer,
-                          VersionSerializer)
+                          VersionSerializer, HuffmanEncodeSerializer)
 
 
 class StatusView(APIView):
@@ -310,7 +314,7 @@ class DocumentViewSet(
         freq = count_tf(
             data,
             settings.ANALYZER_MIN_WORD_LENGTH,
-            normalize=True
+            normalize=settings.ANALYZER_USE_NORMALIZE
         )
         time_end = perf_counter()
         serializer.save(
@@ -358,6 +362,68 @@ class DocumentViewSet(
             serializer.data,
             status=status.HTTP_200_OK
         )
+
+    @extend_schema(
+        summary="Encode document content by Huffman algorithm",
+        responses={
+            200: OpenApiResponse(response=HuffmanEncodeSerializer,
+                                 description='Encoded document'),
+        },
+    )
+    @action(
+        methods=['GET'],
+        detail=True,
+        url_path='huffman'
+    )
+    def encode_text(self, request, *args, **kwargs):
+        doc: Document = self.get_object()
+        with open(doc.document.path, encoding='utf8') as f:
+            text = f.read()
+
+        encoded_text, codes = huffman_encode(text, doc.word_frequency)
+        serializer = HuffmanEncodeSerializer(
+            data={
+                'code': codes,
+                'encoded_text': encoded_text
+            }
+        )
+        serializer.is_valid()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        responses={
+            200: {
+                'type': 'object', 'properties': {
+                    'text': {'type': 'string'}
+                }
+            },
+        },
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                    'text': {'type': 'string', 'format': 'string'},
+                    'code': {'type': 'string', 'format': 'string'}}
+            },
+        },
+    )
+    @action(
+        methods=['POST'],
+        detail=False,
+        url_path='decode-text'
+    )
+    def decode_text(self, request):
+        try:
+            text: str = request.POST['text']
+            code: dict = json.loads(request.POST['code'])
+        except (KeyError, json.JSONDecodeError):
+            return Response(
+                {'detail': 'error'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        result = huffman_decode(text, code)
+        data = {'text': result}
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class CollectionViewSet(

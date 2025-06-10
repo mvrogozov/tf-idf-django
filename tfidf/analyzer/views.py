@@ -28,7 +28,7 @@ class DocumentCreateView(CreateView):
         freq = count_tf(
             data,
             settings.ANALYZER_MIN_WORD_LENGTH,
-            normalize=True
+            normalize=settings.ANALYZER_USE_NORMALIZE
         )
         doc.word_frequency = freq
         doc.time_processed = str(perf_counter() - time_start)
