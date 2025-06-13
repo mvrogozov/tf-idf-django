@@ -69,7 +69,7 @@ class VersionView(APIView):
         }
     )
     def get(self, request):
-        message = 'V1.3.0'
+        message = 'V1.3.1'
         data = {
             'version': message
         }
@@ -443,6 +443,11 @@ class CollectionViewSet(
         if self.action == 'list':
             return CollectionRetrieveSerializer
         return super().get_serializer_class()
+
+    def get_permissions(self):
+        if self.request.method in ['DELETE', 'POST']:
+            return [IsOwnerOrStaff(),]
+        return super().get_permissions()
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
