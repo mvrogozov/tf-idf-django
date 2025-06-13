@@ -7,3 +7,4 @@ chardet
 drf-spectacular
 djangorestframework-simplejwt
 djoser
+redis

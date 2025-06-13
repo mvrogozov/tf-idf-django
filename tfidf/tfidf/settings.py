@@ -92,10 +92,7 @@ SPECTACULAR_SETTINGS = {
 
 DATABASES = {
     'default': {
-        'ENGINE': os.getenv(
-            'DB_ENGINE',
-            default='django.db.backends.postgresql'
-        ),
+        'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('POSTGRES_DB', default='postgres'),
         'USER': os.getenv('POSTGRES_USER', default='postgres'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', default='postgres'),
@@ -137,6 +134,16 @@ if DEBUG:
             },
         },
     }
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://redis:6379",
+        "TIMEOUT": 3600,
+    }
+}
+
+DEFAULT_CACHE_TIME = 60 * 60 * 1  # seconds
 
 ANALYZER_MIN_WORD_LENGTH = int(
     os.getenv('ANALYZER_MIN_WORD_LENGTH', default=3)

@@ -4,6 +4,8 @@ from time import perf_counter
 import chardet
 from django.conf import settings
 from django.db.models import Avg, Count, Max, Min
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
@@ -67,7 +69,7 @@ class VersionView(APIView):
         }
     )
     def get(self, request):
-        message = 'V1.2.0'
+        message = 'V1.3.0'
         data = {
             'version': message
         }
@@ -278,6 +280,7 @@ class DocumentViewSet(
                                  description='Document content'),
         },
     )
+    @method_decorator(cache_page(settings.DEFAULT_CACHE_TIME))
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = DocumentRetrieveSerializer(instance)
@@ -374,11 +377,11 @@ class DocumentViewSet(
         detail=True,
         url_path='huffman'
     )
+    @method_decorator(cache_page(settings.DEFAULT_CACHE_TIME))
     def encode_text(self, request, *args, **kwargs):
         doc: Document = self.get_object()
         with open(doc.document.path, encoding='utf8') as f:
             text = f.read()
-
         encoded_text, codes = huffman_encode(text, doc.word_frequency)
         serializer = HuffmanEncodeSerializer(
             data={

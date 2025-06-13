@@ -49,14 +49,4 @@ urlpatterns = [
         jwt_views.TokenVerifyView.as_view(),
         name='jwt-verify'
     ),
-    # path(
-    #     'users/register/',
-    #     DjUserViewSet.as_view({'post': 'create'}),
-    #     name='user-create'
-    # ),
-    # path(
-    #     'users/<int:id>/',
-    #     DjUserViewSet.as_view({'delete': 'destroy'}),
-    #     name='user-delete'
-    # ),
 ]
