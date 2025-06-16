@@ -14,6 +14,7 @@ from rest_framework.mixins import (CreateModelMixin, DestroyModelMixin,
                                    ListModelMixin, RetrieveModelMixin)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.serializers import ValidationError
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
@@ -69,7 +70,7 @@ class VersionView(APIView):
         }
     )
     def get(self, request):
-        message = 'V1.3.1'
+        message = 'V1.3.2'
         data = {
             'version': message
         }
@@ -312,7 +313,12 @@ class DocumentViewSet(
             data = raw_data.decode('utf-8')
         except UnicodeDecodeError:
             encoding = chardet.detect(raw_data)['encoding']
+            if not encoding:
+                raise ValidationError(
+                    {'document': 'file format error'}
+                )
             data = raw_data.decode(encoding)
+
         freq = count_tf(
             data,
             settings.ANALYZER_MIN_WORD_LENGTH,

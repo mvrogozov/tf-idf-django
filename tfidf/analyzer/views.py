@@ -24,6 +24,8 @@ class DocumentCreateView(CreateView):
             data = raw_data.decode('utf-8')
         except UnicodeDecodeError:
             encoding = chardet.detect(raw_data)['encoding']
+            if not encoding:
+                return redirect('analyzer:index')
             data = raw_data.decode(encoding)
         freq = count_tf(
             data,

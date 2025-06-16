@@ -109,6 +109,11 @@ class DocumentPostSerializer(serializers.ModelSerializer):
             'document',
         )
 
+    def validate_document(self, value):
+        if not value.content_type.startswith('text/'):
+            raise serializers.ValidationError('File must be a text file')
+        return value
+
 
 class DocumentListSerializer(serializers.ModelSerializer):
     title = serializers.SerializerMethodField()
